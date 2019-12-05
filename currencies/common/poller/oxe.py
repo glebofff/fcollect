@@ -20,7 +20,7 @@ class OpenExchangePoller(BasePoller):
             'app_id': self.api_key
         }
         if isinstance(self.symbols, list) and self.symbols:
-            res['symbols'] = ', '.join(self.symbols)
+            res['symbols'] = ','.join(self.symbols)
 
         return res
 

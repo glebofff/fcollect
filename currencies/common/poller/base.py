@@ -103,7 +103,7 @@ class BasePoller(object, metaclass=MetaPoller):
 
         if parsed['timestamp']:
             ts = datetime.datetime.fromtimestamp(parsed['timestamp']).astimezone(pytz.UTC)
-            if ts > self.src.remote_ts:
+            if ts > self.src.remote_ts or force:
                 self.populate_db(parsed=parsed)
         else:
             ts = None

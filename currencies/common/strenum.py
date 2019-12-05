@@ -16,3 +16,6 @@ class StrEnum(object):
     def choices(cls):
         return tuple((k, v) for k, v in cls.__descriptions__.items())
 
+    @classmethod
+    def is_valid(cls, key):
+        return key in cls.__descriptions__
