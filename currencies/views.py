@@ -16,7 +16,27 @@ class ConvertCurrencyView(TemplateView):
     """
     Currency converter JSON View:
 
+    URL:
+        /currencies/convert?src=czk&dst=pln&amount=155
+
+    Required params:
+        src: source currency code
+        dst: destination currency code
+
+    Optional params:
+        amount: amount in source currency
+
+    Result:
+        {
+            "ok": true,
+            "rate": "0.16751",
+            "result": "25.96405",
+            "src": "CZK",
+            "dst": "PLN",
+            "amount": "155.00000"
+        }
     """
+
     def get(self, request, *args, **kwargs):
         from django.db import connection
         from django.http import JsonResponse
@@ -37,7 +57,7 @@ class ConvertCurrencyView(TemplateView):
         try:
             for code in ['src', 'dst']:
                 if not CurrencyCode.is_valid(payload[code]):
-                    raise ConversionException(f'Invalid src code "{payload[code]}"')
+                    raise ConversionException(f'Invalid {code} code "{payload[code]}"')
 
             with connection.cursor() as cursor:
                 cursor.execute(

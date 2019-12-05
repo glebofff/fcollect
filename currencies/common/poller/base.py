@@ -115,7 +115,7 @@ class BasePoller(object, metaclass=MetaPoller):
         self.src.save()
 
 
-def get_poller(abbr=None, **kwargs):
+def get_poller(abbr=None, **kwargs) -> Optional[BasePoller]:
     cls = _registry.get(abbr)
     if isinstance(cls, MetaPoller):
         return cls(**kwargs)
