@@ -68,19 +68,18 @@ class BasePoller(object, metaclass=MetaPoller):
     def parse(self):
         pass
 
-    def populate_db(self, parsed: dict = None):
+    def populate_db(self, parsed: dict = None, ts: datetime.datetime = None):
         if not isinstance(parsed, dict):
             return None
 
         from currencies.models import RateLog
-        ts = datetime.datetime.fromtimestamp(parsed['timestamp']) or self.now
 
         RateLog.objects.bulk_create(
             [
                 RateLog(
                     source=self.src,
                     base=self.base,
-                    ts=ts,
+                    ts=ts or self.now,
                     code=code,
                     rate=rate
                 )
@@ -100,10 +99,28 @@ class BasePoller(object, metaclass=MetaPoller):
 
         self.fetch()
 
-        self.populate_db(
-            self.parse()
-        )
+        parsed = self.parse()
+
+        if parsed['timestamp']:
+            ts = datetime.datetime.fromtimestamp(parsed['timestamp']).astimezone(pytz.UTC)
+            if ts > self.src.remote_ts:
+                self.populate_db(parsed=parsed)
+        else:
+            ts = None
+            self.populate_db(parsed=parsed)
 
         self.last_poll = self.now
         self.src.last_poll = self.last_poll
+        self.src.remote_ts = ts
         self.src.save()
+
+
+def get_poller(abbr=None, **kwargs):
+    cls = _registry.get(abbr)
+    if isinstance(cls, MetaPoller):
+        return cls(**kwargs)
+    return None
+
+
+def list_pollers():
+    return _registry.keys()

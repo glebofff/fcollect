@@ -22,6 +22,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = '$q86mqlf6v$6xib10r9)1qmv^@d0g9i4hw1h63pv5h%%o=-b(h'
 OXE_APP_ID = '70047686a03e4ee7afb9cee95f6d2931'
+OXE_SYMBOLS = ['USD', 'CZK', 'EUR', 'PLN']
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
