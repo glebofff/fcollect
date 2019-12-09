@@ -1,1 +1,2 @@
 from .rate_source import RateSourceModelTestCase
+from .rate_log import RateLogModelTestCase

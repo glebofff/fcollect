@@ -91,7 +91,7 @@ class BasePoller(object, metaclass=MetaPoller):
         if all(
                 [
                     self.last_poll,
-                    self.now <= self.last_poll + self.poll_period,
+                    self.last_poll and self.now <= self.last_poll + self.poll_period,
                     not force
                 ]
         ):
@@ -103,7 +103,7 @@ class BasePoller(object, metaclass=MetaPoller):
 
         if parsed['timestamp']:
             ts = datetime.datetime.fromtimestamp(parsed['timestamp']).astimezone(pytz.UTC)
-            if ts > self.src.remote_ts or force:
+            if not self.src.remote_ts or ts > self.src.remote_ts or force:
                 self.populate_db(parsed=parsed)
         else:
             ts = None

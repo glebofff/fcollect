@@ -41,6 +41,8 @@ class ConvertCurrencyView(TemplateView):
         from django.db import connection
         from django.http import JsonResponse
 
+        from currencies.models import RateLog
+
         payload = {
             'src': request.GET.get('src', '').upper(),
             'dst': request.GET.get('dst', '').upper(),
@@ -59,29 +61,48 @@ class ConvertCurrencyView(TemplateView):
                 if not CurrencyCode.is_valid(payload[code]):
                     raise ConversionException(f'Invalid {code} code "{payload[code]}"')
 
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    """
-                    select 
-                      distinct dst.rate / src.rate as rate 
-                    from 
-                      currencies_ratelog src
-                    join 
-                      currencies_ratelog dst on dst.ts=src.ts and dst.source_id=src.source_id and dst.code != src.code
-                    where 
-                      src.code = %s 
-                      and dst.code = %s
-                      and src.ts = (
-                        select ts from currencies_ratelog where source_id = src.source_id order by ts desc limit 1
-                      )
-                    """,
-                    [
-                        payload['src'],
-                        payload['dst']
-                    ]
-                )
-                r = cursor.fetchone()
-                rate = r and to_decimal(r[0])
+            src = RateLog.objects.filter(
+                code__iexact=payload['src']
+            ).order_by('-ts').first()
+
+            dst = RateLog.objects.filter(
+                code__iexact=payload['dst'],
+                ts=src.ts,
+                source_id=src.source_id,
+                base=src.base
+            ).first() if src else None
+
+            if not src:
+                raise ConversionException(f'Currency not found: {payload[src]}')
+
+            if not dst:
+                raise ConversionException(f'Currency not found: {payload[dst]}')
+
+            rate = dst.rate / src.rate
+
+            # with connection.cursor() as cursor:
+            #     cursor.execute(
+            #         """
+            #         select
+            #           distinct dst.rate / src.rate as rate
+            #         from
+            #           currencies_ratelog src
+            #         join
+            #           currencies_ratelog dst on dst.ts=src.ts and dst.source_id=src.source_id and dst.code != src.code
+            #         where
+            #           src.code = %s
+            #           and dst.code = %s
+            #           and src.ts = (
+            #             select ts from currencies_ratelog where source_id = src.source_id order by ts desc limit 1
+            #           )
+            #         """,
+            #         [
+            #             payload['src'],
+            #             payload['dst']
+            #         ]
+            #     )
+            #     r = cursor.fetchone()
+            #     rate = r and to_decimal(r[0])
 
             if not rate:
                 raise ConversionException('Exchange rate not found')
