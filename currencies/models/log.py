@@ -18,4 +18,4 @@ class RateLog(models.Model):
     ts = models.DateTimeField(db_index=True)
     base = models.CharField(max_length=3, choices=CurrencyCode.choices, db_index=True, default=CurrencyCode.USD)
     code = models.CharField(max_length=3, choices=CurrencyCode.choices, db_index=True)
-    rate = models.DecimalField(max_digits=12, decimal_places=3, default=0)
+    rate = models.DecimalField(max_digits=20, decimal_places=8, default=0)

@@ -4,12 +4,14 @@
 # Created: 05/12/19
 import datetime
 import pytz
+from django.core.exceptions import ValidationError
+from django.core.validators import URLValidator
 from typing import Optional
 
 from currencies.common.code import CurrencyCode
 from currencies.models import RateSource
 
-from .exceptions import AlreadyPolledException
+from .exceptions import AlreadyPolledException, ParseException, FetchException, PollerException
 
 _registry = {}
 
@@ -35,9 +37,27 @@ class BasePoller(object, metaclass=MetaPoller):
     poll_period: datetime.timedelta = datetime.timedelta(days=1)
     last_poll: datetime.datetime = None
 
-    def __init__(self,  url: str = ''):
-        self.url = url or self.url
-        self.now = datetime.datetime.now().astimezone(pytz.UTC)
+    def __init__(self,  url: str = None, abbr: str = None,
+                 api_key: str = None, api_pass: str = None,
+                 base: str = '', ts: datetime.datetime = None):
+
+        self.url = url if url is not None else self.url
+        self.abbr = abbr if abbr is not None else self.abbr
+        self.api_key = api_key if api_key is not None else self.api_key
+        self.api_pass = api_pass if api_pass is not None else self.api_pass
+        self.base = base or self.base
+
+        url_validator = URLValidator()
+        try:
+            url_validator(self.url)
+        except ValidationError:
+            raise PollerException('Invalid URL')
+
+        if not CurrencyCode.is_valid(self.base):
+            raise PollerException(f'Invalid Currency Code: {self.base}')
+
+        self.now = ts if isinstance(ts, datetime.datetime) else datetime.datetime.now()
+        self.now = self.now.astimezone(pytz.UTC)
 
         try:
             self.src = RateSource.objects.get(abbr=self.abbr)
@@ -62,11 +82,38 @@ class BasePoller(object, metaclass=MetaPoller):
         decoded = urllib.parse.urlencode(params)
         return f'{url}?{decoded}'
 
-    def fetch(self):
-        pass
+    def fetch(self, force: bool=False) -> str:
+        """
+        Fetches data from url.
+        """
+        from urllib.request import urlopen
+        from urllib.error import URLError
 
-    def parse(self):
-        pass
+        try:
+            with urlopen(self.get_url()) as response:
+                return response.read()
+
+        except URLError as e:
+            raise FetchException(f'{e}')
+
+    def parse(self, content) -> dict:
+        """
+        Parses and validates data returned by self.fetch
+        """
+        import json
+        try:
+            data = json.loads(content)
+        except json.JSONDecodeError as e:
+            raise ParseException('Invalid response')
+
+        if set(data) < {'timestamp', 'base', 'rates'}:
+            raise ParseException('Invalid payload')
+
+        return {
+            'timestamp': data['timestamp'],
+            'base': data['base'],
+            'rates': data['rates']
+        }
 
     def populate_db(self, parsed: dict = None, ts: datetime.datetime = None):
         if not isinstance(parsed, dict):
@@ -97,9 +144,9 @@ class BasePoller(object, metaclass=MetaPoller):
         ):
             raise AlreadyPolledException
 
-        self.fetch()
-
-        parsed = self.parse()
+        parsed = self.parse(
+            self.fetch()
+        )
 
         if parsed['timestamp']:
             ts = datetime.datetime.fromtimestamp(parsed['timestamp']).astimezone(pytz.UTC)

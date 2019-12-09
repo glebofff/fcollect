@@ -108,6 +108,7 @@ class ConvertCurrencyView(TemplateView):
                 raise ConversionException('Exchange rate not found')
 
             result['rate'] = rate
+            result['timestamp'] = src.ts
             result['result'] = to_decimal(rate * payload['amount'])
 
         except Exception as e:

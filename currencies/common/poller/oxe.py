@@ -24,28 +24,5 @@ class OpenExchangePoller(BasePoller):
 
         return res
 
-    def fetch(self, force: bool=False):
-        from urllib.request import urlopen
-        from urllib.error import URLError
 
-        try:
-            self._response = urlopen(self.get_url())
-        except URLError:
-            raise FetchException
-
-    def parse(self):
-        import json
-        try:
-            data = json.loads(self._response.read())
-        except json.JSONDecodeError as e:
-            raise ParseException('Invalid response')
-
-        if set(data) <= {'timestamp', 'base', 'rates'}:
-            raise ParseException('Invalid payload')
-
-        return {
-            'timestamp': data['timestamp'],
-            'base': data['base'],
-            'rates': data['rates']
-        }
 
