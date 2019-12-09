@@ -14,5 +14,5 @@ class RateSource(models.Model):
         ]
 
     abbr = models.CharField(max_length=64, db_index=True)
-    last_poll = models.DateTimeField(auto_now_add=True, null=True)
-    remote_ts = models.DateTimeField(auto_now_add=True, null=True)
+    last_poll = models.DateTimeField(auto_now_add=False, null=True)
+    remote_ts = models.DateTimeField(auto_now_add=False, null=True)
